@@ -2,18 +2,20 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/bohexists/ping-monitor-svc/telegram"
 	"github.com/bohexists/ping-monitor-svc/workerpool"
 )
 
 const (
-	INTERVAL        = time.Minute * 1 // Time between job generations
-	REQUEST_TIMEOUT = time.Second * 1 // Timeout for HTTP requests
-	WORKERS_COUNT   = 2               // Number of workers
+	INTERVAL        = time.Second * 30       // Time between job generations
+	REQUEST_TIMEOUT = time.Millisecond * 200 // Timeout for HTTP requests
+	WORKERS_COUNT   = 3                      // Number of workers
 )
 
 // URLs to monitor
@@ -33,8 +35,16 @@ func main() {
 
 	workerPool.Init() // Start workers
 
+	botToken := "YOUR_BOT_TOKEN" // Add telegram TOKEN
+	chatID := int64(1)           // Add telegram chat ID
+
+	telegramSender, err := telegram.NewSender(botToken, chatID)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	go generateJobs(workerPool)
-	go proccessResults(results)
+	go proccessResults(results, telegramSender)
 
 	quit := make(chan os.Signal, 1) // Handle OS signals
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
@@ -45,10 +55,15 @@ func main() {
 }
 
 // proccessResults prints results from the channel
-func proccessResults(results chan workerpool.Result) {
+func proccessResults(results chan workerpool.Result, telegram *telegram.Telegram) {
 	go func() {
 		for result := range results {
 			fmt.Println(result.Info())
+
+			err := telegram.SendNotification(result.Info())
+			if err != nil {
+				log.Println("Failed to send notification:", err)
+			}
 		}
 	}()
 }
