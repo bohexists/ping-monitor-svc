@@ -19,7 +19,12 @@ const (
 // URLs to monitor
 var urls = []string{
 	"https://google.com/",
+	"https://calendar.google.com/",
+	"https://mail.google.com/",
+	"https://drive.google.com/",
+	"https://translate.google.co.uk/",
 	"https://golang.org/",
+	"https://github.com/",
 }
 
 func main() {
