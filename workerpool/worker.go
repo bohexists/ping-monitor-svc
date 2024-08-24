@@ -5,10 +5,12 @@ import (
 	"time"
 )
 
+// worker makes HTTP requests
 type worker struct {
 	client *http.Client
 }
 
+// newWorker creates a worker with a timeout
 func newWorker(timeout time.Duration) *worker {
 	return &worker{
 		&http.Client{
@@ -17,6 +19,7 @@ func newWorker(timeout time.Duration) *worker {
 	}
 }
 
+// process performs the job (HTTP GET)
 func (w worker) process(j Job) Result {
 	result := Result{URL: j.URL}
 

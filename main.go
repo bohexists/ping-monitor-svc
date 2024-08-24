@@ -11,11 +11,12 @@ import (
 )
 
 const (
-	INTERVAL        = time.Minute * 1
-	REQUEST_TIMEOUT = time.Second * 1
-	WORKERS_COUNT   = 2
+	INTERVAL        = time.Minute * 1 // Time between job generations
+	REQUEST_TIMEOUT = time.Second * 1 // Timeout for HTTP requests
+	WORKERS_COUNT   = 2               // Number of workers
 )
 
+// URLs to monitor
 var urls = []string{
 	"https://google.com/",
 	"https://golang.org/",
@@ -23,21 +24,22 @@ var urls = []string{
 
 func main() {
 	results := make(chan workerpool.Result)
-	workerPool := workerpool.New(WORKERS_COUNT, REQUEST_TIMEOUT, results)
+	workerPool := workerpool.New(WORKERS_COUNT, REQUEST_TIMEOUT, results) // Initialize pool
 
-	workerPool.Init()
+	workerPool.Init() // Start workers
 
 	go generateJobs(workerPool)
 	go proccessResults(results)
 
-	quit := make(chan os.Signal, 1)
+	quit := make(chan os.Signal, 1) // Handle OS signals
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
 
 	<-quit
 
-	workerPool.Stop()
+	workerPool.Stop() // Stop the worker pool
 }
 
+// proccessResults prints results from the channel
 func proccessResults(results chan workerpool.Result) {
 	go func() {
 		for result := range results {
@@ -46,6 +48,7 @@ func proccessResults(results chan workerpool.Result) {
 	}()
 }
 
+// generateJobs periodically adds jobs to the pool
 func generateJobs(wp *workerpool.Pool) {
 	for {
 		for _, url := range urls {
