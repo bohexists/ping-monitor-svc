@@ -1,73 +1,108 @@
-# Ping Monitor Service
+# Ping Monitor Service (ping-monitor-svc)
 
-The Ping Monitor Service is a simple tool that continuously monitors the availability and response times of specified URLs. It utilizes a worker pool to efficiently handle multiple concurrent requests.
+Ping Monitor Service is a Go-based application designed to monitor the availability and response time of specified URLs. The service uses a worker pool to perform HTTP requests periodically and can send notifications to a specified Telegram chat.
 
 ## Features
 
-- Periodically checks the availability of URLs.
-- Logs the status code, response time, and any errors encountered during the request.
-- Configurable worker pool for handling multiple URLs concurrently.
-- Graceful shutdown on receiving termination signals.
+- **URL Monitoring**: Periodically checks the availability and response time of configured URLs.
+- **Worker Pool**: Efficiently manages multiple concurrent HTTP requests using a configurable number of workers.
+- **Result Logging**: Logs the status, response time, and errors (if any) for each monitored URL.
+- **Telegram Notifications**: Sends notifications to a specified Telegram chat when a URL is checked, with details of the response or error.
+- **Graceful Shutdown**: Handles OS signals for a clean shutdown of the service.
 
-## Project Structure
+## Installation
 
-- **main.go**: The entry point of the service. It initializes the worker pool and manages the job generation and result processing.
-- **workerpool/pool.go**: Contains the `Pool` struct that manages the distribution of jobs to workers and handles the lifecycle of the worker pool.
-- **workerpool/worker.go**: Contains the `worker` struct responsible for making HTTP requests and collecting the results.
+To install the Ping Monitor Service, clone the repository and ensure you have Go installed on your machine.
 
-## Getting Started
+```sh
+git clone https://github.com/bohexists/ping-monitor-svc.git
+cd ping-monitor-svc
+go mod tidy
+```
 
-### Prerequisites
+## Configuration
 
-- Go 1.18 or later
+### Environment Variables
 
-### Installation
+Before running the service, set up the following environment variables:
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/bohexists/ping-monitor-svc.git
-   cd ping-monitor-svc
-   ```
+- `BOT_TOKEN`: Your Telegram bot token.
+- `CHAT_ID`: The chat ID where notifications will be sent.
 
-2. Install dependencies:
-   ```bash
-   go mod tidy
-   ```
+You can set these variables in your shell or include them in your code if you prefer hardcoding (not recommended for production).
 
-### Usage
+### URLs to Monitor
 
-To run the Ping Monitor Service, execute the following command:
+The URLs to monitor are currently hardcoded in the `main.go` file:
 
-```bash
+```go
+var urls = []string{
+    "https://google.com/",
+    "https://calendar.google.com/",
+    "https://mail.google.com/",
+    "https://drive.google.com/",
+    "https://translate.google.co.uk/",
+    "https://golang.org/",
+    "https://github.com/",
+}
+```
+
+You can modify this list to include the URLs you need to monitor.
+
+## Usage
+
+To run the service, use the following command:
+
+```sh
 go run main.go
 ```
 
-The service will start monitoring the specified URLs every minute and print the results to the console.
+### Example
 
-### Configuration
+When you run the service, it will periodically check the configured URLs and log the results. If you have set up the Telegram bot and chat ID correctly, it will also send the results to your specified Telegram chat.
 
-You can configure the following constants in `main.go`:
-
-- `INTERVAL`: The interval between each set of checks (default: 1 minute).
-- `REQUEST_TIMEOUT`: The timeout for each HTTP request (default: 1 second).
-- `WORKERS_COUNT`: The number of workers handling the requests (default: 2 workers).
-
-### Example Output
-
-```
-Success - https://google.com/ - Status: 200, Response Time: 123ms
-Success - https://golang.org/ - Status: 200, Response Time: 145ms
+```sh
+2024/08/25 14:35:01 Success - https://google.com/ - Status: 200, Response Time: 112ms
+2024/08/25 14:35:01 Success - https://calendar.google.com/ - Status: 200, Response Time: 134ms
+2024/08/25 14:35:01 Error - https://mail.google.com/ - Get "https://mail.google.com/": dial tcp: lookup mail.google.com: no such host
 ```
 
-### Graceful Shutdown
+The same messages will be sent to your Telegram chat.
 
-The service listens for termination signals (`SIGTERM`, `SIGINT`). Upon receiving such a signal, it will stop accepting new jobs and wait for all ongoing jobs to complete before shutting down.
+## Code Structure
 
+- **`main.go`**: Entry point of the application. Initializes the worker pool, starts generating jobs, processes results, and sends Telegram notifications.
+- **`workerpool/`**: Contains the worker pool implementation, including job processing logic.
+   - `pool.go`: Defines the `Pool` struct and its methods.
+   - `worker.go`: Implements the worker that processes each job.
+- **`telegram/`**: Contains the Telegram notification logic.
+   - `telegram.go`: Defines the `Telegram` struct and methods for sending notifications.
 
-### Contributions
+## Telegram Integration
 
-Contributions are welcome! Please open an issue or submit a pull request if you have any improvements or bug fixes.
+The Telegram integration allows you to receive real-time notifications in your Telegram chat. You need to configure your bot token and chat ID:
 
-### Contact
+```go
+botToken := "YOUR_BOT_TOKEN"
+chatID := int64(YOUR_CHAT_ID)
+telegramSender, err := telegram.NewSender(botToken, chatID)
+if err != nil {
+    log.Fatal(err)
+}
+```
 
-For any inquiries, please contact https://github.com/bohexists.
+In the `proccessResults` function, the results are sent to the Telegram chat:
+
+```go
+err := telegramSender.SendNotification(result.Info())
+if err != nil {
+    log.Println("Failed to send notification:", err)
+}
+```
+
+## Future Enhancements
+
+- **Dashboard Integration**: Adding a web-based dashboard for real-time monitoring.
+- **Advanced Error Handling**: Implementing more granular error tracking and alerting.
+- **Extended Notification Options**: Adding support for email and other messaging platforms.
+- **Customizable Job Schedules**: Allowing more flexible job scheduling (e.g., CRON-based).
